@@ -1,0 +1,33 @@
+# Node.js dependencies (should only be installed inside the container)
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Strapi build artifacts (not needed in the build stage)
+.cache
+build
+
+# Environment variables
+.env
+.env.local
+.env.development
+.env.production
+
+# OS and editor-related files (Mac, Linux, Windows)
+.DS_Store
+Thumbs.db
+.idea
+.vscode
+
+# Docker-related files
+docker-compose.override.yml
+
+.dockerignore
+.env.example
+.git
+.gitignore
+.strapi
+.tmp
+database
+Dockerfile
+README.md
