@@ -33,6 +33,35 @@
       "type": "relation",
       "relation": "oneToOne",
       "target": "api::tag.tag"
+    },
+    "isPublic": {
+      "type": "boolean"
+    },
+    "likes": {
+      "type": "integer",
+      "default": 0
+    },
+    "views": {
+      "type": "integer",
+      "default": 0
+    },
+    "challenge": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::challenge.challenge",
+      "inversedBy": "projects"
+    },
+    "likedBy": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "likedProjects"
+    },
+    "comments": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::comment.comment",
+      "mappedBy": "project"
     }
   }
 }

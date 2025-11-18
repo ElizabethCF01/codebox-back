@@ -1,0 +1,48 @@
+{
+  "kind": "collectionType",
+  "collectionName": "profiles",
+  "info": {
+    "singularName": "profile",
+    "pluralName": "profiles",
+    "displayName": "Profile",
+    "description": ""
+  },
+  "options": {
+    "draftAndPublish": true
+  },
+  "attributes": {
+    "user": {
+      "type": "relation",
+      "relation": "oneToOne",
+      "target": "plugin::users-permissions.user",
+      "inversedBy": "profile"
+    },
+    "bio": {
+      "type": "richtext"
+    },
+    "githubUser": {
+      "type": "string"
+    },
+    "totalXP": {
+      "type": "integer"
+    },
+    "challengesCompleted": {
+      "type": "integer"
+    },
+    "lastActivityDate": {
+      "type": "datetime"
+    },
+    "badges": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::badge.badge",
+      "inversedBy": "profiles"
+    },
+    "completedChallenges": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::challenge.challenge",
+      "inversedBy": "profiles"
+    }
+  }
+}
