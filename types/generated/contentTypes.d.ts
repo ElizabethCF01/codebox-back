@@ -566,6 +566,7 @@ export interface ApiProfileProfile extends Struct.CollectionTypeSchema {
       'api::profile.profile'
     > &
       Schema.Attribute.Private;
+    projects: Schema.Attribute.Relation<'oneToMany', 'api::project.project'>;
     publishedAt: Schema.Attribute.DateTime;
     totalXP: Schema.Attribute.Integer;
     updatedAt: Schema.Attribute.DateTime;
@@ -618,6 +619,7 @@ export interface ApiProjectProject extends Struct.CollectionTypeSchema {
     > &
       Schema.Attribute.Private;
     name: Schema.Attribute.String;
+    profile: Schema.Attribute.Relation<'manyToOne', 'api::profile.profile'>;
     publishedAt: Schema.Attribute.DateTime;
     tag: Schema.Attribute.Relation<'oneToOne', 'api::tag.tag'>;
     updatedAt: Schema.Attribute.DateTime;

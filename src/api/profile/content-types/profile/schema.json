@@ -43,6 +43,12 @@
       "relation": "manyToMany",
       "target": "api::challenge.challenge",
       "inversedBy": "profiles"
+    },
+    "projects": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::project.project",
+      "mappedBy": "profile"
     }
   }
 }

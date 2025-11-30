@@ -62,6 +62,12 @@
       "relation": "oneToMany",
       "target": "api::comment.comment",
       "mappedBy": "project"
+    },
+    "profile": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::profile.profile",
+      "inversedBy": "projects"
     }
   }
 }
