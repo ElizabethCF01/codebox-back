@@ -147,4 +147,86 @@ export default factories.createCoreController('api::project.project', ({ strapi 
       return ctx.internalServerError('Error processing like');
     }
   },
+
+  async myProjects(ctx) {
+    const userId = ctx.state.user?.id;
+
+    if (!userId) {
+      return ctx.unauthorized('You must be authenticated');
+    }
+
+    try {
+      // Obtener parámetros de paginación
+      const pagination: any = ctx.query.pagination || {};
+      const page = Number(pagination.page || 1);
+      const pageSize = Number(pagination.pageSize || 8);
+
+      // Buscar proyectos del usuario
+      const projects = await strapi.entityService.findPage('api::project.project', {
+        filters: {
+          author: userId,
+        },
+        populate: ctx.query.populate || ['author', 'tag', 'likedBy', 'comments'],
+        sort: { createdAt: 'desc' },
+        page,
+        pageSize,
+      });
+
+      // Agregar campo hasLiked a cada proyecto
+      const enrichedData = projects.results.map((project: any) => ({
+        ...project,
+        hasLiked: project.likedBy?.some((user: any) => user.id === userId) || false,
+      }));
+
+      return {
+        data: enrichedData,
+        meta: projects.pagination,
+      };
+    } catch (error) {
+      strapi.log.error('Error in myProjects:', error);
+      return ctx.internalServerError('Error fetching projects');
+    }
+  },
+
+  async likedProjects(ctx) {
+    const userId = ctx.state.user?.id;
+
+    if (!userId) {
+      return ctx.unauthorized('You must be authenticated');
+    }
+
+    try {
+      // Obtener parámetros de paginación
+      const pagination: any = ctx.query.pagination || {};
+      const page = Number(pagination.page || 1);
+      const pageSize = Number(pagination.pageSize || 8);
+
+      // Buscar proyectos que le gustan al usuario
+      const projects = await strapi.entityService.findPage('api::project.project', {
+        filters: {
+          likedBy: {
+            id: userId,
+          },
+        },
+        populate: ctx.query.populate || ['author', 'tag', 'likedBy', 'comments'],
+        sort: { createdAt: 'desc' },
+        page,
+        pageSize,
+      });
+
+      // Agregar campo hasLiked (siempre true para esta ruta)
+      const enrichedData = projects.results.map((project: any) => ({
+        ...project,
+        hasLiked: true,
+      }));
+
+      return {
+        data: enrichedData,
+        meta: projects.pagination,
+      };
+    } catch (error) {
+      strapi.log.error('Error in likedProjects:', error);
+      return ctx.internalServerError('Error fetching liked projects');
+    }
+  },
 }));

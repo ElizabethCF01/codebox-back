@@ -13,5 +13,23 @@ export default {
         middlewares: [],
       },
     },
+    {
+      method: 'GET',
+      path: '/projects/my-projects',
+      handler: 'project.myProjects',
+      config: {
+        policies: [],
+        middlewares: ['plugin::users-permissions.rateLimit'],
+      },
+    },
+    {
+      method: 'GET',
+      path: '/projects/liked',
+      handler: 'project.likedProjects',
+      config: {
+        policies: [],
+        middlewares: ['plugin::users-permissions.rateLimit'],
+      },
+    },
   ],
 };
