@@ -160,27 +160,82 @@ export default factories.createCoreController('api::project.project', ({ strapi 
       const pagination: any = ctx.query.pagination || {};
       const page = Number(pagination.page || 1);
       const pageSize = Number(pagination.pageSize || 8);
+      const start = (page - 1) * pageSize;
 
-      // Buscar proyectos del usuario
-      const projects = await strapi.entityService.findPage('api::project.project', {
-        filters: {
-          author: userId,
-        },
-        populate: ctx.query.populate || ['author', 'tag', 'likedBy', 'comments'],
-        sort: { createdAt: 'desc' },
-        page,
-        pageSize,
-      });
+      // Query SQL optimizada para obtener los document_ids únicos de proyectos del usuario
+      // En Strapi v5, cada document_id puede tener múltiples IDs físicos (draft y published)
+      const myProjectIdsResult = await strapi.db.connection.raw(`
+        SELECT DISTINCT p.document_id, MAX(p.created_at) as created_at
+        FROM projects p
+        INNER JOIN projects_author_lnk pa ON p.id = pa.project_id
+        WHERE pa.user_id = ?
+        AND p.published_at IS NOT NULL
+        GROUP BY p.document_id
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+      `, [userId, pageSize, start]);
+
+      // Obtener total count para la paginación
+      const totalResult = await strapi.db.connection.raw(`
+        SELECT COUNT(DISTINCT p.document_id) as total
+        FROM projects p
+        INNER JOIN projects_author_lnk pa ON p.id = pa.project_id
+        WHERE pa.user_id = ?
+        AND p.published_at IS NOT NULL
+      `, [userId]);
+
+      // Extraer rows (compatible con SQLite y PostgreSQL)
+      const rows = Array.isArray(myProjectIdsResult) ? myProjectIdsResult : myProjectIdsResult.rows || [];
+      const totalRows = Array.isArray(totalResult) ? totalResult : totalResult.rows || [];
+      const total = totalRows[0]?.total || 0;
+
+      // Si no hay proyectos, devolver respuesta vacía
+      if (rows.length === 0) {
+        return {
+          data: [],
+          meta: {
+            pagination: {
+              page,
+              pageSize,
+              pageCount: 0,
+              total: 0,
+            },
+          },
+        };
+      }
+
+      // Obtener los document_ids de los proyectos
+      const documentIds = rows.map((row: any) => row.document_id);
+
+      // Buscar los proyectos completos con sus relaciones usando los document_ids únicos
+      // En Strapi v5, usamos documents API para trabajar con documentId
+      const projectsPromises = documentIds.map((documentId: string) =>
+        strapi.documents('api::project.project').findOne({
+          documentId,
+          status: 'published',
+          populate: ctx.query.populate || ['author', 'tag', 'likedBy', 'comments', 'challenge'],
+        })
+      );
+
+      const projectsResults = await Promise.all(projectsPromises);
+      const projects = projectsResults.filter((p) => p !== null);
 
       // Agregar campo hasLiked a cada proyecto
-      const enrichedData = projects.results.map((project: any) => ({
+      const enrichedData = projects.map((project: any) => ({
         ...project,
         hasLiked: project.likedBy?.some((user: any) => user.id === userId) || false,
       }));
 
       return {
         data: enrichedData,
-        meta: projects.pagination,
+        meta: {
+          pagination: {
+            page,
+            pageSize,
+            pageCount: Math.ceil(total / pageSize),
+            total,
+          },
+        },
       };
     } catch (error) {
       strapi.log.error('Error in myProjects:', error);
@@ -200,29 +255,82 @@ export default factories.createCoreController('api::project.project', ({ strapi 
       const pagination: any = ctx.query.pagination || {};
       const page = Number(pagination.page || 1);
       const pageSize = Number(pagination.pageSize || 8);
+      const start = (page - 1) * pageSize;
 
-      // Buscar proyectos que le gustan al usuario
-      const projects = await strapi.entityService.findPage('api::project.project', {
-        filters: {
-          likedBy: {
-            id: userId,
+      // Query SQL optimizada para obtener los document_ids únicos de proyectos que le gustan al usuario
+      // En Strapi v5, cada document_id puede tener múltiples IDs físicos (draft y published)
+      const likedProjectIdsResult = await strapi.db.connection.raw(`
+        SELECT DISTINCT p.document_id, MAX(p.created_at) as created_at
+        FROM projects p
+        INNER JOIN projects_liked_by_lnk l ON p.id = l.project_id
+        WHERE l.user_id = ?
+        AND p.published_at IS NOT NULL
+        GROUP BY p.document_id
+        ORDER BY created_at DESC
+        LIMIT ? OFFSET ?
+      `, [userId, pageSize, start]);
+
+      // Obtener total count para la paginación
+      const totalResult = await strapi.db.connection.raw(`
+        SELECT COUNT(DISTINCT p.document_id) as total
+        FROM projects p
+        INNER JOIN projects_liked_by_lnk l ON p.id = l.project_id
+        WHERE l.user_id = ?
+        AND p.published_at IS NOT NULL
+      `, [userId]);
+
+      // Extraer rows (compatible con SQLite y PostgreSQL)
+      const rows = Array.isArray(likedProjectIdsResult) ? likedProjectIdsResult : likedProjectIdsResult.rows || [];
+      const totalRows = Array.isArray(totalResult) ? totalResult : totalResult.rows || [];
+      const total = totalRows[0]?.total || 0;
+
+      // Si no hay proyectos liked, devolver respuesta vacía
+      if (rows.length === 0) {
+        return {
+          data: [],
+          meta: {
+            pagination: {
+              page,
+              pageSize,
+              pageCount: 0,
+              total: 0,
+            },
           },
-        },
-        populate: ctx.query.populate || ['author', 'tag', 'likedBy', 'comments'],
-        sort: { createdAt: 'desc' },
-        page,
-        pageSize,
-      });
+        };
+      }
+
+      // Obtener los document_ids de los proyectos
+      const documentIds = rows.map((row: any) => row.document_id);
+
+      // Buscar los proyectos completos con sus relaciones usando los document_ids únicos
+      // En Strapi v5, usamos findMany de documents API para trabajar con documentId
+      const projectsPromises = documentIds.map((documentId: string) =>
+        strapi.documents('api::project.project').findOne({
+          documentId,
+          status: 'published',
+          populate: ctx.query.populate || ['author', 'tag', 'likedBy', 'comments'],
+        })
+      );
+
+      const projectsResults = await Promise.all(projectsPromises);
+      const projects = projectsResults.filter((p) => p !== null);
 
       // Agregar campo hasLiked (siempre true para esta ruta)
-      const enrichedData = projects.results.map((project: any) => ({
+      const enrichedData = projects.map((project: any) => ({
         ...project,
         hasLiked: true,
       }));
 
       return {
         data: enrichedData,
-        meta: projects.pagination,
+        meta: {
+          pagination: {
+            page,
+            pageSize,
+            pageCount: Math.ceil(total / pageSize),
+            total,
+          },
+        },
       };
     } catch (error) {
       strapi.log.error('Error in likedProjects:', error);
