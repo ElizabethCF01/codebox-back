@@ -621,6 +621,7 @@ export interface ApiProjectProject extends Struct.CollectionTypeSchema {
     name: Schema.Attribute.String;
     profile: Schema.Attribute.Relation<'manyToOne', 'api::profile.profile'>;
     publishedAt: Schema.Attribute.DateTime;
+    rating: Schema.Attribute.Integer;
     tag: Schema.Attribute.Relation<'oneToOne', 'api::tag.tag'>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &

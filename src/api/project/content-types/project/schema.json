@@ -68,6 +68,9 @@
       "relation": "manyToOne",
       "target": "api::profile.profile",
       "inversedBy": "projects"
+    },
+    "rating": {
+      "type": "integer"
     }
   }
 }

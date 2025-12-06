@@ -14,7 +14,7 @@
       "name": "Apache 2.0",
       "url": "https://www.apache.org/licenses/LICENSE-2.0.html"
     },
-    "x-generation-date": "2025-12-06T10:52:37.269Z"
+    "x-generation-date": "2025-12-06T23:37:59.461Z"
   },
   "x-strapi-config": {
     "plugins": [
@@ -7185,6 +7185,9 @@
                               }
                             }
                           },
+                          "rating": {
+                            "type": "integer"
+                          },
                           "createdAt": {
                             "type": "string",
                             "format": "date-time"
@@ -9581,6 +9584,9 @@
                     }
                   }
                 },
+                "rating": {
+                  "type": "integer"
+                },
                 "createdAt": {
                   "type": "string",
                   "format": "date-time"
@@ -11299,6 +11305,9 @@
                           "type": "string"
                         }
                       }
+                    },
+                    "rating": {
+                      "type": "integer"
                     },
                     "createdAt": {
                       "type": "string",
@@ -14243,6 +14252,9 @@
                         }
                       }
                     },
+                    "rating": {
+                      "type": "integer"
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
@@ -14612,6 +14624,9 @@
                   }
                 ],
                 "example": "string or id"
+              },
+              "rating": {
+                "type": "integer"
               },
               "locale": {
                 "type": "string"
@@ -16164,6 +16179,9 @@
                         }
                       }
                     },
+                    "rating": {
+                      "type": "integer"
+                    },
                     "createdAt": {
                       "type": "string",
                       "format": "date-time"
@@ -16379,6 +16397,9 @@
                 "type": "string"
               }
             }
+          },
+          "rating": {
+            "type": "integer"
           },
           "createdAt": {
             "type": "string",

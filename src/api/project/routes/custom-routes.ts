@@ -31,5 +31,14 @@ export default {
         middlewares: ['plugin::users-permissions.rateLimit'],
       },
     },
+    {
+      method: 'GET',
+      path: '/projects/challenge/:challengeId',
+      handler: 'project.projectsByChallenge',
+      config: {
+        policies: [],
+        middlewares: [],
+      },
+    },
   ],
 };

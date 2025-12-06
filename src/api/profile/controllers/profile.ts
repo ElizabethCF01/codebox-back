@@ -13,8 +13,14 @@ export default factories.createCoreController('api::profile.profile', ({ strapi 
     }
 
     try {
-      const profile = await strapi.entityService.findMany('api::profile.profile', {
-        filters: { user: user.id },
+      const profiles = await strapi.documents('api::profile.profile').findMany({
+        filters: {
+          user: {
+            documentId: {
+              $eq: user.documentId,
+            },
+          },
+        },
         populate: {
           user: {
             fields: ['id', 'username', 'email']
@@ -31,11 +37,11 @@ export default factories.createCoreController('api::profile.profile', ({ strapi 
         },
       });
 
-      if (!profile || profile.length === 0) {
+      if (!profiles || profiles.length === 0) {
         return ctx.notFound('Profile not found');
       }
 
-      return profile[0];
+      return profiles[0];
     } catch (error) {
       ctx.throw(500, error);
     }
@@ -49,34 +55,37 @@ export default factories.createCoreController('api::profile.profile', ({ strapi 
     }
 
     try {
-      const profile = await strapi.entityService.findMany('api::profile.profile', {
-        filters: { user: user.id },
+      const profiles = await strapi.documents('api::profile.profile').findMany({
+        filters: {
+          user: {
+            documentId: {
+              $eq: user.documentId,
+            },
+          },
+        },
       });
 
-      if (!profile || profile.length === 0) {
+      if (!profiles || profiles.length === 0) {
         return ctx.notFound('Profile not found');
       }
 
       const { bio, githubUser } = ctx.request.body;
 
-      const updatedProfile = await strapi.entityService.update(
-        'api::profile.profile',
-        profile[0].id,
-        {
-          data: {
-            bio,
-            githubUser,
+      const updatedProfile = await strapi.documents('api::profile.profile').update({
+        documentId: profiles[0].documentId,
+        data: {
+          bio,
+          githubUser,
+        },
+        populate: {
+          user: {
+            fields: ['id', 'username', 'email']
           },
-          populate: {
-            user: {
-              fields: ['id', 'username', 'email']
-            },
-            badges: true,
-            completedChallenges: true,
-            projects: true,
-          },
-        }
-      );
+          badges: true,
+          completedChallenges: true,
+          projects: true,
+        },
+      });
 
       return updatedProfile;
     } catch (error) {
