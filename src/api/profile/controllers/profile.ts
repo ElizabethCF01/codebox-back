@@ -85,7 +85,6 @@ export default factories.createCoreController('api::profile.profile', ({ strapi 
         },
       });
 
-      // Publicar los cambios (importante en Strapi v5 con draftAndPublish: true)
       await strapi.documents('api::profile.profile').publish({
         documentId: profiles[0].documentId,
       });
