@@ -13,6 +13,7 @@ export default factories.createCoreController('api::profile.profile', ({ strapi 
     }
 
     try {
+      // Buscar el perfil publicado del usuario
       const profiles = await strapi.documents('api::profile.profile').findMany({
         filters: {
           user: {
@@ -21,6 +22,7 @@ export default factories.createCoreController('api::profile.profile', ({ strapi 
             },
           },
         },
+        status: 'published', // Solo obtener la versión publicada
         populate: {
           user: {
             fields: ['id', 'username', 'email']
@@ -43,6 +45,7 @@ export default factories.createCoreController('api::profile.profile', ({ strapi 
 
       return profiles[0];
     } catch (error) {
+      strapi.log.error('Error in me:', error);
       ctx.throw(500, error);
     }
   },
@@ -55,6 +58,7 @@ export default factories.createCoreController('api::profile.profile', ({ strapi 
     }
 
     try {
+      // Buscar el perfil del usuario (versión publicada)
       const profiles = await strapi.documents('api::profile.profile').findMany({
         filters: {
           user: {
@@ -63,6 +67,7 @@ export default factories.createCoreController('api::profile.profile', ({ strapi 
             },
           },
         },
+        status: 'published',
       });
 
       if (!profiles || profiles.length === 0) {
@@ -71,12 +76,24 @@ export default factories.createCoreController('api::profile.profile', ({ strapi 
 
       const { bio, githubUser } = ctx.request.body;
 
-      const updatedProfile = await strapi.documents('api::profile.profile').update({
+      // Actualizar el documento
+      await strapi.documents('api::profile.profile').update({
         documentId: profiles[0].documentId,
         data: {
           bio,
           githubUser,
         },
+      });
+
+      // Publicar los cambios (importante en Strapi v5 con draftAndPublish: true)
+      await strapi.documents('api::profile.profile').publish({
+        documentId: profiles[0].documentId,
+      });
+
+      // Obtener el perfil actualizado y publicado con populate
+      const finalProfile = await strapi.documents('api::profile.profile').findOne({
+        documentId: profiles[0].documentId,
+        status: 'published',
         populate: {
           user: {
             fields: ['id', 'username', 'email']
@@ -87,8 +104,9 @@ export default factories.createCoreController('api::profile.profile', ({ strapi 
         },
       });
 
-      return updatedProfile;
+      return finalProfile;
     } catch (error) {
+      strapi.log.error('Error in updateMe:', error);
       ctx.throw(500, error);
     }
   },
