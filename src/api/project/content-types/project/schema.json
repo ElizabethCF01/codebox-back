@@ -12,7 +12,8 @@
   },
   "attributes": {
     "name": {
-      "type": "string"
+      "type": "string",
+      "required": true
     },
     "htmlCode": {
       "type": "richtext"
@@ -29,13 +30,26 @@
       "target": "plugin::users-permissions.user",
       "inversedBy": "projects"
     },
+    "profile": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::profile.profile",
+      "inversedBy": "projects"
+    },
     "tag": {
       "type": "relation",
       "relation": "oneToOne",
       "target": "api::tag.tag"
     },
+    "challenge": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::challenge.challenge",
+      "inversedBy": "projects"
+    },
     "isPublic": {
-      "type": "boolean"
+      "type": "boolean",
+      "default": true
     },
     "likes": {
       "type": "integer",
@@ -45,11 +59,26 @@
       "type": "integer",
       "default": 0
     },
-    "challenge": {
-      "type": "relation",
-      "relation": "manyToOne",
-      "target": "api::challenge.challenge",
-      "inversedBy": "projects"
+    "viewCount": {
+      "type": "integer",
+      "default": 0
+    },
+    "votesReceived": {
+      "type": "integer",
+      "default": 0
+    },
+    "rating": {
+      "type": "integer"
+    },
+    "featured": {
+      "type": "boolean",
+      "default": false
+    },
+    "featuredAt": {
+      "type": "datetime"
+    },
+    "submittedToChallengeAt": {
+      "type": "datetime"
     },
     "likedBy": {
       "type": "relation",
@@ -57,20 +86,16 @@
       "target": "plugin::users-permissions.user",
       "inversedBy": "likedProjects"
     },
+    "votedBy": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "plugin::users-permissions.user"
+    },
     "comments": {
       "type": "relation",
       "relation": "oneToMany",
       "target": "api::comment.comment",
       "mappedBy": "project"
-    },
-    "profile": {
-      "type": "relation",
-      "relation": "manyToOne",
-      "target": "api::profile.profile",
-      "inversedBy": "projects"
-    },
-    "rating": {
-      "type": "integer"
     }
   }
 }

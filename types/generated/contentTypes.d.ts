@@ -409,20 +409,33 @@ export interface ApiBadgeBadge extends Struct.CollectionTypeSchema {
     draftAndPublish: true;
   };
   attributes: {
+    category: Schema.Attribute.Enumeration<
+      ['milestone', 'skill', 'streak', 'social']
+    > &
+      Schema.Attribute.DefaultTo<'milestone'>;
+    challengesRequired: Schema.Attribute.Integer;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     description: Schema.Attribute.Text;
+    icon: Schema.Attribute.String;
     image: Schema.Attribute.Media<'images' | 'files' | 'videos' | 'audios'>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<'oneToMany', 'api::badge.badge'> &
       Schema.Attribute.Private;
-    name: Schema.Attribute.String;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
     profiles: Schema.Attribute.Relation<'manyToMany', 'api::profile.profile'>;
     publishedAt: Schema.Attribute.DateTime;
+    rarity: Schema.Attribute.Enumeration<
+      ['common', 'rare', 'epic', 'legendary']
+    > &
+      Schema.Attribute.DefaultTo<'common'>;
+    requirement: Schema.Attribute.Text;
+    slug: Schema.Attribute.UID<'name'>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    xpRequired: Schema.Attribute.Integer;
   };
 }
 
@@ -441,12 +454,18 @@ export interface ApiChallengeChallenge extends Struct.CollectionTypeSchema {
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    currentStatus: Schema.Attribute.Enumeration<
+      ['draft', 'submissions_open', 'voting', 'completed', 'archived']
+    > &
+      Schema.Attribute.DefaultTo<'draft'>;
     description: Schema.Attribute.RichText;
     difficulty: Schema.Attribute.Enumeration<
       ['beginner', 'intermediate', 'advanced']
-    >;
+    > &
+      Schema.Attribute.DefaultTo<'beginner'>;
     endDate: Schema.Attribute.DateTime;
     estimatedTime: Schema.Attribute.String;
+    featured: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
     instructions: Schema.Attribute.RichText;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
@@ -463,11 +482,17 @@ export interface ApiChallengeChallenge extends Struct.CollectionTypeSchema {
     shortDescription: Schema.Attribute.String;
     slug: Schema.Attribute.UID<'title'>;
     startDate: Schema.Attribute.DateTime;
-    title: Schema.Attribute.String;
+    submissionCount: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    tags: Schema.Attribute.Relation<'manyToMany', 'api::tag.tag'>;
+    title: Schema.Attribute.String & Schema.Attribute.Required;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
-    xpReward: Schema.Attribute.Integer;
+    viewCount: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    votingEndDate: Schema.Attribute.DateTime;
+    votingStartDate: Schema.Attribute.DateTime;
+    winners: Schema.Attribute.Relation<'manyToMany', 'api::project.project'>;
+    xpReward: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<50>;
   };
 }
 
@@ -486,7 +511,7 @@ export interface ApiCommentComment extends Struct.CollectionTypeSchema {
       'manyToOne',
       'plugin::users-permissions.user'
     >;
-    content: Schema.Attribute.Text;
+    content: Schema.Attribute.Text & Schema.Attribute.Required;
     createdAt: Schema.Attribute.DateTime;
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -496,8 +521,13 @@ export interface ApiCommentComment extends Struct.CollectionTypeSchema {
       'api::comment.comment'
     > &
       Schema.Attribute.Private;
+    parentComment: Schema.Attribute.Relation<
+      'manyToOne',
+      'api::comment.comment'
+    >;
     project: Schema.Attribute.Relation<'manyToOne', 'api::project.project'>;
     publishedAt: Schema.Attribute.DateTime;
+    replies: Schema.Attribute.Relation<'oneToMany', 'api::comment.comment'>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -550,7 +580,9 @@ export interface ApiProfileProfile extends Struct.CollectionTypeSchema {
   attributes: {
     badges: Schema.Attribute.Relation<'manyToMany', 'api::badge.badge'>;
     bio: Schema.Attribute.RichText;
-    challengesCompleted: Schema.Attribute.Integer;
+    challengesCompleted: Schema.Attribute.Integer &
+      Schema.Attribute.DefaultTo<0>;
+    challengesWon: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
     completedChallenges: Schema.Attribute.Relation<
       'manyToMany',
       'api::challenge.challenge'
@@ -560,6 +592,7 @@ export interface ApiProfileProfile extends Struct.CollectionTypeSchema {
       Schema.Attribute.Private;
     githubUser: Schema.Attribute.String;
     lastActivityDate: Schema.Attribute.DateTime;
+    level: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<1>;
     locale: Schema.Attribute.String & Schema.Attribute.Private;
     localizations: Schema.Attribute.Relation<
       'oneToMany',
@@ -568,7 +601,8 @@ export interface ApiProfileProfile extends Struct.CollectionTypeSchema {
       Schema.Attribute.Private;
     projects: Schema.Attribute.Relation<'oneToMany', 'api::project.project'>;
     publishedAt: Schema.Attribute.DateTime;
-    totalXP: Schema.Attribute.Integer;
+    streak: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    totalXP: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
@@ -604,8 +638,10 @@ export interface ApiProjectProject extends Struct.CollectionTypeSchema {
     createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
     cssCode: Schema.Attribute.RichText;
+    featured: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<false>;
+    featuredAt: Schema.Attribute.DateTime;
     htmlCode: Schema.Attribute.RichText;
-    isPublic: Schema.Attribute.Boolean;
+    isPublic: Schema.Attribute.Boolean & Schema.Attribute.DefaultTo<true>;
     jsCode: Schema.Attribute.RichText;
     likedBy: Schema.Attribute.Relation<
       'manyToMany',
@@ -618,15 +654,22 @@ export interface ApiProjectProject extends Struct.CollectionTypeSchema {
       'api::project.project'
     > &
       Schema.Attribute.Private;
-    name: Schema.Attribute.String;
+    name: Schema.Attribute.String & Schema.Attribute.Required;
     profile: Schema.Attribute.Relation<'manyToOne', 'api::profile.profile'>;
     publishedAt: Schema.Attribute.DateTime;
     rating: Schema.Attribute.Integer;
+    submittedToChallengeAt: Schema.Attribute.DateTime;
     tag: Schema.Attribute.Relation<'oneToOne', 'api::tag.tag'>;
     updatedAt: Schema.Attribute.DateTime;
     updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
       Schema.Attribute.Private;
+    viewCount: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
     views: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
+    votedBy: Schema.Attribute.Relation<
+      'manyToMany',
+      'plugin::users-permissions.user'
+    >;
+    votesReceived: Schema.Attribute.Integer & Schema.Attribute.DefaultTo<0>;
   };
 }
 

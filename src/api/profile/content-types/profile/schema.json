@@ -24,10 +24,24 @@
       "type": "string"
     },
     "totalXP": {
-      "type": "integer"
+      "type": "integer",
+      "default": 0
+    },
+    "level": {
+      "type": "integer",
+      "default": 1
     },
     "challengesCompleted": {
-      "type": "integer"
+      "type": "integer",
+      "default": 0
+    },
+    "challengesWon": {
+      "type": "integer",
+      "default": 0
+    },
+    "streak": {
+      "type": "integer",
+      "default": 0
     },
     "lastActivityDate": {
       "type": "datetime"

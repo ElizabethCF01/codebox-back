@@ -567,4 +567,102 @@ export default factories.createCoreController('api::project.project', ({ strapi 
       return ctx.internalServerError('Error fetching projects by challenge');
     }
   },
+
+  /**
+   * Vote on a challenge submission during voting period
+   * - Checks if challenge is in voting status
+   * - Prevents duplicate votes
+   * - Increments votesReceived
+   * - Also increments regular likes
+   */
+  async vote(ctx) {
+    const { id } = ctx.params;
+    const userId = ctx.state.user?.id;
+
+    if (!userId) {
+      return ctx.unauthorized('You must be authenticated to vote');
+    }
+
+    try {
+      // Get the project with challenge and votedBy
+      const project: any = await strapi.documents('api::project.project').findOne({
+        documentId: id,
+        populate: ['challenge', 'author'],
+      });
+
+      if (!project) {
+        return ctx.notFound('Project not found');
+      }
+
+      // Check if project is linked to a challenge
+      if (!project.challenge) {
+        return ctx.badRequest('This project is not a challenge submission');
+      }
+
+      // Get the challenge to verify voting status
+      const challenge: any = await strapi.documents('api::challenge.challenge').findOne({
+        documentId: project.challenge.documentId,
+      });
+
+      if (!challenge) {
+        return ctx.notFound('Challenge not found');
+      }
+
+      // Check if challenge is in voting period
+      if (challenge.currentStatus !== 'voting') {
+        return ctx.badRequest(`Voting is not active for this challenge. Current status: ${challenge.currentStatus}`);
+      }
+
+      // Check if user has already voted on this project using raw SQL query
+      const votedCheck = await strapi.db.connection.raw(`
+        SELECT user_id
+        FROM projects_voted_by_lnk
+        WHERE user_id = ? AND project_id = ?
+        LIMIT 1
+      `, [userId, project.id]);
+
+      const votedRows = Array.isArray(votedCheck) ? votedCheck : votedCheck.rows || [];
+      const hasVoted = votedRows.length > 0;
+
+      if (hasVoted) {
+        return ctx.badRequest('You have already voted for this project');
+      }
+
+      // Check if user is voting for their own project
+      if (project.author?.id === userId) {
+        return ctx.badRequest('You cannot vote for your own project');
+      }
+
+      // Add vote
+      const updatedProject: any = await strapi.documents('api::project.project').update({
+        documentId: id,
+        data: {
+          votedBy: {
+            connect: [userId],
+          } as any,
+          votesReceived: (project.votesReceived || 0) + 1,
+          // Also increment regular likes
+          likedBy: {
+            connect: [userId],
+          } as any,
+          likes: (project.likes || 0) + 1,
+        },
+      });
+
+      // Publish changes
+      await strapi.documents('api::project.project').publish({
+        documentId: id,
+      });
+
+      return ctx.send({
+        voted: true,
+        votesReceived: updatedProject.votesReceived,
+        likes: updatedProject.likes,
+        message: 'Vote added successfully',
+      });
+    } catch (error) {
+      strapi.log.error('Error in vote:', error);
+      return ctx.internalServerError('Error processing vote');
+    }
+  },
 }));

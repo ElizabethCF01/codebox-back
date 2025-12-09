@@ -12,7 +12,8 @@
   },
   "attributes": {
     "title": {
-      "type": "string"
+      "type": "string",
+      "required": true
     },
     "slug": {
       "type": "uid",
@@ -30,7 +31,8 @@
         "beginner",
         "intermediate",
         "advanced"
-      ]
+      ],
+      "default": "beginner"
     },
     "estimatedTime": {
       "type": "string"
@@ -49,26 +51,66 @@
         "audios"
       ]
     },
+    "currentStatus": {
+      "type": "enumeration",
+      "enum": [
+        "draft",
+        "submissions_open",
+        "voting",
+        "completed",
+        "archived"
+      ],
+      "default": "draft"
+    },
+    "votingStartDate": {
+      "type": "datetime"
+    },
+    "votingEndDate": {
+      "type": "datetime"
+    },
+    "submissionCount": {
+      "type": "integer",
+      "default": 0
+    },
+    "featured": {
+      "type": "boolean",
+      "default": false
+    },
+    "viewCount": {
+      "type": "integer",
+      "default": 0
+    },
+    "xpReward": {
+      "type": "integer",
+      "default": 50
+    },
     "projects": {
       "type": "relation",
       "relation": "oneToMany",
       "target": "api::project.project",
       "mappedBy": "challenge"
     },
-    "startDate": {
-      "type": "datetime"
+    "winners": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::project.project"
     },
-    "endDate": {
-      "type": "datetime"
-    },
-    "xpReward": {
-      "type": "integer"
+    "tags": {
+      "type": "relation",
+      "relation": "manyToMany",
+      "target": "api::tag.tag"
     },
     "profiles": {
       "type": "relation",
       "relation": "manyToMany",
       "target": "api::profile.profile",
       "mappedBy": "completedChallenges"
+    },
+    "startDate": {
+      "type": "datetime"
+    },
+    "endDate": {
+      "type": "datetime"
     }
   }
 }

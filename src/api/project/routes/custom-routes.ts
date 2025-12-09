@@ -40,5 +40,14 @@ export default {
         middlewares: [],
       },
     },
+    {
+      method: 'POST',
+      path: '/projects/:id/vote',
+      handler: 'project.vote',
+      config: {
+        policies: [],
+        middlewares: [],
+      },
+    },
   ],
 };

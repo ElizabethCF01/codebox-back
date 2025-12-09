@@ -11,7 +11,8 @@
   },
   "attributes": {
     "content": {
-      "type": "text"
+      "type": "text",
+      "required": true
     },
     "author": {
       "type": "relation",
@@ -24,6 +25,18 @@
       "relation": "manyToOne",
       "target": "api::project.project",
       "inversedBy": "comments"
+    },
+    "parentComment": {
+      "type": "relation",
+      "relation": "manyToOne",
+      "target": "api::comment.comment",
+      "inversedBy": "replies"
+    },
+    "replies": {
+      "type": "relation",
+      "relation": "oneToMany",
+      "target": "api::comment.comment",
+      "mappedBy": "parentComment"
     }
   }
 }
