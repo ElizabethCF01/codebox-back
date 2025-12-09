@@ -27,6 +27,12 @@ export default factories.createCoreController('api::project.project', ({ strapi 
       ctx.query.sort = 'createdAt:desc';
     }
 
+    // Filtrar solo proyectos públicos
+    if (!ctx.query.filters) {
+      ctx.query.filters = {};
+    }
+    (ctx.query.filters as any).isPublic = true;
+
     // Llamar al método find original con el sort validado
     const { data, meta } = await super.find(ctx);
 
@@ -63,32 +69,59 @@ export default factories.createCoreController('api::project.project', ({ strapi 
   async findOne(ctx) {
     const userId = ctx.state.user?.id;
 
+    // Asegurar que el autor siempre esté poblado para validación de privacidad
+    if (!ctx.query.populate) {
+      ctx.query.populate = ['author'];
+    } else if (typeof ctx.query.populate === 'string') {
+      // Si es "*", ya incluye todo, no agregar nada
+      // Si ya incluye "author", no hacer nada
+      // Si no incluye "author", agregarlo
+      if (ctx.query.populate !== '*' && !ctx.query.populate.includes('author')) {
+        ctx.query.populate = `${ctx.query.populate},author`;
+      }
+    } else if (Array.isArray(ctx.query.populate) && !ctx.query.populate.includes('author')) {
+      (ctx.query.populate as any).push('author');
+    }
+
     // Llamar al método findOne original
     const response = await super.findOne(ctx);
 
-    // Si el usuario está autenticado, agregar el campo hasLiked
-    if (userId && response.data) {
+    // Verificar privacidad del proyecto
+    if (response.data) {
       const project = response.data;
 
-      // Una sola query SQL para verificar si el usuario dio like
-      const likedProjects = await strapi.db.connection.raw(`
-        SELECT project_id
-        FROM projects_liked_by_lnk
-        WHERE user_id = ? AND project_id = ?
-        LIMIT 1
-      `, [userId, project.id]);
+      // Si el proyecto es privado, solo el autor puede verlo
+      if (!project.isPublic) {
+        const projectAuthorId = project.author?.id;
 
-      // SQLite devuelve directamente un array, PostgreSQL usa .rows
-      const rows = Array.isArray(likedProjects) ? likedProjects : likedProjects.rows || [];
-      const hasLiked = rows.length > 0;
+        // Si no hay usuario autenticado o no es el autor, denegar acceso
+        if (!userId || userId !== projectAuthorId) {
+          return ctx.forbidden('This project is private');
+        }
+      }
 
-      return {
-        data: {
-          ...project,
-          hasLiked,
-        },
-        meta: response.meta,
-      };
+      // Si el usuario está autenticado, agregar el campo hasLiked
+      if (userId) {
+        // Una sola query SQL para verificar si el usuario dio like
+        const likedProjects = await strapi.db.connection.raw(`
+          SELECT project_id
+          FROM projects_liked_by_lnk
+          WHERE user_id = ? AND project_id = ?
+          LIMIT 1
+        `, [userId, project.id]);
+
+        // SQLite devuelve directamente un array, PostgreSQL usa .rows
+        const rows = Array.isArray(likedProjects) ? likedProjects : likedProjects.rows || [];
+        const hasLiked = rows.length > 0;
+
+        return {
+          data: {
+            ...project,
+            hasLiked,
+          },
+          meta: response.meta,
+        };
+      }
     }
 
     return response;
@@ -304,12 +337,14 @@ export default factories.createCoreController('api::project.project', ({ strapi 
 
       // Query SQL optimizada para obtener los document_ids únicos de proyectos que le gustan al usuario
       // En Strapi v5, cada document_id puede tener múltiples IDs físicos (draft y published)
+      // Solo mostrar proyectos públicos
       const likedProjectIdsResult = await strapi.db.connection.raw(`
         SELECT DISTINCT p.document_id, MAX(p.created_at) as created_at, MAX(p.likes) as likes, MAX(p.views) as views
         FROM projects p
         INNER JOIN projects_liked_by_lnk l ON p.id = l.project_id
         WHERE l.user_id = ?
         AND p.published_at IS NOT NULL
+        AND p.is_public = 1
         GROUP BY p.document_id
         ORDER BY ${orderByClause}
         LIMIT ? OFFSET ?
@@ -322,6 +357,7 @@ export default factories.createCoreController('api::project.project', ({ strapi 
         INNER JOIN projects_liked_by_lnk l ON p.id = l.project_id
         WHERE l.user_id = ?
         AND p.published_at IS NOT NULL
+        AND p.is_public = 1
       `, [userId]);
 
       // Extraer rows (compatible con SQLite y PostgreSQL)
@@ -423,12 +459,14 @@ export default factories.createCoreController('api::project.project', ({ strapi 
 
       // Query SQL para obtener proyectos del challenge
       // En Strapi v5, las relaciones manyToOne usan tablas de enlace (_lnk)
+      // Solo mostrar proyectos públicos
       const challengeProjectsResult = await strapi.db.connection.raw(`
         SELECT DISTINCT p.document_id, MAX(p.created_at) as created_at, MAX(p.likes) as likes, MAX(p.views) as views
         FROM projects p
         INNER JOIN projects_challenge_lnk pc ON p.id = pc.project_id
         WHERE pc.challenge_id = ?
         AND p.published_at IS NOT NULL
+        AND p.is_public = 1
         GROUP BY p.document_id
         ORDER BY ${orderByClause}
         LIMIT ? OFFSET ?
@@ -441,6 +479,7 @@ export default factories.createCoreController('api::project.project', ({ strapi 
         INNER JOIN projects_challenge_lnk pc ON p.id = pc.project_id
         WHERE pc.challenge_id = ?
         AND p.published_at IS NOT NULL
+        AND p.is_public = 1
       `, [challenge.id]);
 
       // Extraer rows (compatible con SQLite y PostgreSQL)
