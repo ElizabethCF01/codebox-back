@@ -36,7 +36,7 @@ export default factories.createCoreController('api::project.project', ({ strapi 
     // Llamar al método find original con el sort validado
     const { data, meta } = await super.find(ctx);
 
-    // Si el usuario está autenticado, agregar el campo hasLiked
+    // Si el usuario está autenticado, agregar los campos hasLiked y hasVoted
     if (userId && data && data.length > 0) {
       // Obtener todos los documentIds de los proyectos
       const projectIds = data.map((project: any) => project.id);
@@ -49,15 +49,27 @@ export default factories.createCoreController('api::project.project', ({ strapi 
         AND project_id IN (${projectIds.map(() => '?').join(',')})
       `, [userId, ...projectIds]);
 
-      // Crear un Set para búsqueda rápida O(1)
-      // SQLite devuelve directamente un array, PostgreSQL usa .rows
-      const rows = Array.isArray(likedProjects) ? likedProjects : likedProjects.rows || [];
-      const likedProjectIds = new Set(rows.map((row: any) => row.project_id));
+      // Una sola query SQL para obtener todos los votos del usuario
+      const votedProjects = await strapi.db.connection.raw(`
+        SELECT project_id
+        FROM projects_voted_by_lnk
+        WHERE user_id = ?
+        AND project_id IN (${projectIds.map(() => '?').join(',')})
+      `, [userId, ...projectIds]);
 
-      // Agregar hasLiked a cada proyecto
+      // Crear Sets para búsqueda rápida O(1)
+      // SQLite devuelve directamente un array, PostgreSQL usa .rows
+      const likedRows = Array.isArray(likedProjects) ? likedProjects : likedProjects.rows || [];
+      const likedProjectIds = new Set(likedRows.map((row: any) => row.project_id));
+
+      const votedRows = Array.isArray(votedProjects) ? votedProjects : votedProjects.rows || [];
+      const votedProjectIds = new Set(votedRows.map((row: any) => row.project_id));
+
+      // Agregar hasLiked y hasVoted a cada proyecto
       const enrichedData = data.map((project: any) => ({
         ...project,
         hasLiked: likedProjectIds.has(project.id),
+        hasVoted: votedProjectIds.has(project.id),
       }));
 
       return { data: enrichedData, meta };
@@ -100,7 +112,7 @@ export default factories.createCoreController('api::project.project', ({ strapi 
         }
       }
 
-      // Si el usuario está autenticado, agregar el campo hasLiked
+      // Si el usuario está autenticado, agregar los campos hasLiked y hasVoted
       if (userId) {
         // Una sola query SQL para verificar si el usuario dio like
         const likedProjects = await strapi.db.connection.raw(`
@@ -110,14 +122,26 @@ export default factories.createCoreController('api::project.project', ({ strapi 
           LIMIT 1
         `, [userId, project.id]);
 
+        // Una sola query SQL para verificar si el usuario votó
+        const votedProjects = await strapi.db.connection.raw(`
+          SELECT project_id
+          FROM projects_voted_by_lnk
+          WHERE user_id = ? AND project_id = ?
+          LIMIT 1
+        `, [userId, project.id]);
+
         // SQLite devuelve directamente un array, PostgreSQL usa .rows
-        const rows = Array.isArray(likedProjects) ? likedProjects : likedProjects.rows || [];
-        const hasLiked = rows.length > 0;
+        const likedRows = Array.isArray(likedProjects) ? likedProjects : likedProjects.rows || [];
+        const hasLiked = likedRows.length > 0;
+
+        const votedRows = Array.isArray(votedProjects) ? votedProjects : votedProjects.rows || [];
+        const hasVoted = votedRows.length > 0;
 
         return {
           data: {
             ...project,
             hasLiked,
+            hasVoted,
           },
           meta: response.meta,
         };
@@ -285,10 +309,25 @@ export default factories.createCoreController('api::project.project', ({ strapi 
       const projectsResults = await Promise.all(projectsPromises);
       const projects = projectsResults.filter((p) => p !== null);
 
-      // Agregar campo hasLiked a cada proyecto
+      // Obtener los IDs de los proyectos para las queries de likes y votos
+      const projectIds = projects.map((project: any) => project.id);
+
+      // Query para obtener los proyectos que el usuario ha votado
+      const votedProjects = await strapi.db.connection.raw(`
+        SELECT project_id
+        FROM projects_voted_by_lnk
+        WHERE user_id = ?
+        AND project_id IN (${projectIds.map(() => '?').join(',')})
+      `, [userId, ...projectIds]);
+
+      const votedRows = Array.isArray(votedProjects) ? votedProjects : votedProjects.rows || [];
+      const votedProjectIds = new Set(votedRows.map((row: any) => row.project_id));
+
+      // Agregar campos hasLiked y hasVoted a cada proyecto
       const enrichedData = projects.map((project: any) => ({
         ...project,
         hasLiked: project.likedBy?.some((user: any) => user.id === userId) || false,
+        hasVoted: votedProjectIds.has(project.id),
       }));
 
       return {
@@ -396,10 +435,25 @@ export default factories.createCoreController('api::project.project', ({ strapi 
       const projectsResults = await Promise.all(projectsPromises);
       const projects = projectsResults.filter((p) => p !== null);
 
-      // Agregar campo hasLiked (siempre true para esta ruta)
+      // Obtener los IDs de los proyectos para la query de votos
+      const projectIds = projects.map((project: any) => project.id);
+
+      // Query para obtener los proyectos que el usuario ha votado
+      const votedProjects = await strapi.db.connection.raw(`
+        SELECT project_id
+        FROM projects_voted_by_lnk
+        WHERE user_id = ?
+        AND project_id IN (${projectIds.map(() => '?').join(',')})
+      `, [userId, ...projectIds]);
+
+      const votedRows = Array.isArray(votedProjects) ? votedProjects : votedProjects.rows || [];
+      const votedProjectIds = new Set(votedRows.map((row: any) => row.project_id));
+
+      // Agregar campos hasLiked (siempre true para esta ruta) y hasVoted
       const enrichedData = projects.map((project: any) => ({
         ...project,
         hasLiked: true,
+        hasVoted: votedProjectIds.has(project.id),
       }));
 
       return {
@@ -523,7 +577,7 @@ export default factories.createCoreController('api::project.project', ({ strapi 
       const projectsResults = await Promise.all(projectsPromises);
       const projects = projectsResults.filter((p) => p !== null);
 
-      // Si el usuario está autenticado, agregar campo hasLiked
+      // Si el usuario está autenticado, agregar campos hasLiked y hasVoted
       let enrichedData = projects;
       if (userId && projects.length > 0) {
         const projectIds = projects.map((project: any) => project.id);
@@ -535,12 +589,23 @@ export default factories.createCoreController('api::project.project', ({ strapi 
           AND project_id IN (${projectIds.map(() => '?').join(',')})
         `, [userId, ...projectIds]);
 
-        const rows = Array.isArray(likedProjects) ? likedProjects : likedProjects.rows || [];
-        const likedProjectIds = new Set(rows.map((row: any) => row.project_id));
+        const votedProjects = await strapi.db.connection.raw(`
+          SELECT project_id
+          FROM projects_voted_by_lnk
+          WHERE user_id = ?
+          AND project_id IN (${projectIds.map(() => '?').join(',')})
+        `, [userId, ...projectIds]);
+
+        const likedRows = Array.isArray(likedProjects) ? likedProjects : likedProjects.rows || [];
+        const likedProjectIds = new Set(likedRows.map((row: any) => row.project_id));
+
+        const votedRows = Array.isArray(votedProjects) ? votedProjects : votedProjects.rows || [];
+        const votedProjectIds = new Set(votedRows.map((row: any) => row.project_id));
 
         enrichedData = projects.map((project: any) => ({
           ...project,
           hasLiked: likedProjectIds.has(project.id),
+          hasVoted: votedProjectIds.has(project.id),
         }));
       }
 
