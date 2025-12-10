@@ -1,4 +1,39 @@
 {
+  "badges": [
+    {
+      "name": "First Project",
+      "slug": "first-project",
+      "description": "Created your very first project! This is just the beginning of your coding journey.",
+      "icon": "🎯",
+      "requirement": "Create your first project",
+      "category": "milestone",
+      "rarity": "common",
+      "xpRequired": null,
+      "challengesRequired": null
+    },
+    {
+      "name": "First Challenge Submit",
+      "slug": "first-challenge-submit",
+      "description": "Completed your first challenge submission! You're taking your skills to the next level.",
+      "icon": "🏆",
+      "requirement": "Submit to your first challenge",
+      "category": "milestone",
+      "rarity": "common",
+      "xpRequired": null,
+      "challengesRequired": 1
+    },
+    {
+      "name": "Junior Star",
+      "slug": "junior-star",
+      "description": "One of your projects reached 3 likes from the community! People are noticing your work.",
+      "icon": "⭐",
+      "requirement": "Get 3 likes on any project",
+      "category": "social",
+      "rarity": "rare",
+      "xpRequired": null,
+      "challengesRequired": null
+    }
+  ],
   "global": {
     "siteName": "Strapi Blog",
     "defaultSeo": {
