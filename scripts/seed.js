@@ -3,7 +3,7 @@
 const fs = require('fs-extra');
 const path = require('path');
 const mime = require('mime-types');
-const { categories, authors, articles, global, about } = require('../data/data.json');
+const { categories, authors, articles, global, about, badges } = require('../data/data.json');
 
 async function seedExampleApp() {
   const shouldImportSeedData = await isFirstRun();
@@ -236,6 +236,19 @@ async function importAuthors() {
   }
 }
 
+async function importBadges() {
+  for (const badge of badges) {
+    await createEntry({
+      model: 'badge',
+      entry: {
+        ...badge,
+        // Make sure it's not a draft
+        publishedAt: Date.now(),
+      },
+    });
+  }
+}
+
 async function importSeedData() {
   // Allow read of application content types
   await setPublicPermissions({
@@ -244,9 +257,11 @@ async function importSeedData() {
     author: ['find', 'findOne'],
     global: ['find', 'findOne'],
     about: ['find', 'findOne'],
+    badge: ['find', 'findOne'],
   });
 
   // Create all entries
+  await importBadges();
   await importCategories();
   await importAuthors();
   await importArticles();
