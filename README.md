@@ -32,6 +32,29 @@ npm run build
 npm run start
 ```
 
+## 🆕 Novedades Recientes
+
+### Sistema de Comentarios (Nuevo)
+- Sistema completo de comentarios con soporte de replies
+- Visualización jerárquica de comentarios y respuestas
+- Control de acceso: solo el autor puede eliminar sus comentarios
+- Límite de 1000 caracteres por comentario
+
+### Mejoras en Proyectos
+- Campo `hasVoted` para verificar si el usuario ya votó en un challenge
+- Optimización de consultas SQL para likes y votos
+- Mejor manejo de contadores de likes (nunca negativos)
+
+### Mejoras en Perfiles
+- Nuevo campo `likedProjectsCount` en respuestas de perfil
+- Filtros mejorados para proyectos publicados
+- Endpoints optimizados para creators y perfiles de creators
+
+### Actualización de Usuario
+- Endpoint para actualizar email y username del usuario
+- Validación de unicidad de email y username
+- Sanitización de respuestas (no se devuelven passwords)
+
 ## 📚 Documentación de APIs
 
 Toda la documentación de las APIs está disponible en los siguientes archivos:
@@ -41,6 +64,7 @@ Toda la documentación de las APIs está disponible en los siguientes archivos:
 - **[CHALLENGE_SYSTEM_IMPLEMENTATION.md](CHALLENGE_SYSTEM_IMPLEMENTATION.md)** - Sistema de challenges y votación completo
 - **[PROJECTS_API_DOCUMENTATION.md](PROJECTS_API_DOCUMENTATION.md)** - API de proyectos
 - **[PROFILE_API_DOCUMENTATION.md](PROFILE_API_DOCUMENTATION.md)** - API de perfil de usuario
+- **[FRONTEND_LIKE_EXAMPLES.md](FRONTEND_LIKE_EXAMPLES.md)** - Ejemplos de implementación de likes en frontend
 
 ## 🎯 Características Principales
 
@@ -52,9 +76,19 @@ Toda la documentación de las APIs está disponible en los siguientes archivos:
 
 ### Sistema de Proyectos
 - Proyectos públicos y privados
-- Sistema de likes y votación
+- Sistema de likes con toggle automático
+- Sistema de votación en challenges
+- Campo `hasVoted` para verificar si el usuario votó
 - Ordenamiento avanzado (newest, popular, most viewed)
 - Submissions a challenges
+- Contador de vistas optimizado
+
+### Sistema de Comentarios
+- Comentarios en proyectos con soporte de replies (hilos)
+- CRUD completo (crear, leer, eliminar)
+- Sistema jerárquico (comentarios padre e hijos)
+- Solo el autor puede eliminar sus comentarios
+- Visualización pública sin autenticación
 
 ### Gamificación
 - Sistema de XP y niveles
@@ -62,11 +96,13 @@ Toda la documentación de las APIs está disponible en los siguientes archivos:
 - Challenges completados y ganados
 - Sistema de rachas (streaks)
 
-### Gestión de Usuarios
+### Gestión de Usuarios y Perfiles
 - Autenticación JWT
-- Perfiles personalizables
+- Perfiles personalizables (bio, GitHub user)
 - Actualización de email/username
 - Integración con GitHub
+- Campo `likedProjectsCount` en respuestas de perfil
+- Filtros para proyectos publicados en perfil
 
 ## 🏗️ Estructura del Proyecto
 
@@ -106,8 +142,13 @@ src/
 - `GET /api/projects/challenge/:id` - Proyectos de un challenge
 
 ### Perfil
-- `GET /api/profiles/me` - Mi perfil
+- `GET /api/profiles/me` - Mi perfil (incluye likedProjectsCount)
 - `PUT /api/profiles/me` - Actualizar perfil
+
+### Comentarios
+- `GET /api/projects/:projectId/comments` - Obtener comentarios de un proyecto
+- `POST /api/projects/:projectId/comments` - Crear comentario o reply
+- `DELETE /api/comments/:id` - Eliminar comentario propio
 
 ## 🛠️ Tecnologías
 
@@ -176,7 +217,48 @@ const response = await fetch('http://localhost:1337/api/projects/xyz456/vote', {
 });
 ```
 
-Ver más ejemplos en [API_SUMMARY.md](API_SUMMARY.md#🚀-ejemplos-rápidos)
+### Dar Like a un Proyecto (Toggle)
+
+```javascript
+const response = await fetch('http://localhost:1337/api/projects/xyz456/like', {
+  method: 'POST',
+  headers: { 'Authorization': 'Bearer YOUR_JWT' }
+});
+
+const { liked, likes, message } = await response.json();
+// liked: true/false, likes: número total, message: descripción
+```
+
+### Crear Comentario
+
+```javascript
+// Comentario principal
+const response = await fetch('http://localhost:1337/api/projects/xyz456/comments', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    content: 'Excelente proyecto!'
+  })
+});
+
+// Reply a un comentario
+const reply = await fetch('http://localhost:1337/api/projects/xyz456/comments', {
+  method: 'POST',
+  headers: {
+    'Authorization': 'Bearer YOUR_JWT',
+    'Content-Type': 'application/json'
+  },
+  body: JSON.stringify({
+    content: 'Gracias!',
+    parentCommentId: 'abc123' // ID del comentario padre
+  })
+});
+```
+
+Ver más ejemplos en [API_SUMMARY.md](API_SUMMARY.md#🚀-ejemplos-rápidos) y [FRONTEND_LIKE_EXAMPLES.md](FRONTEND_LIKE_EXAMPLES.md)
 
 ## 🔒 Seguridad
 
