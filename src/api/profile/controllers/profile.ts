@@ -30,6 +30,11 @@ export default factories.createCoreController('api::profile.profile', ({ strapi 
           badges: true,
           completedChallenges: true,
           projects: {
+            filters: {
+              publishedAt: {
+                $notNull: true,
+              },
+            },
             populate: {
               likedBy: true,
               comments: true,
@@ -99,7 +104,13 @@ export default factories.createCoreController('api::profile.profile', ({ strapi 
           },
           badges: true,
           completedChallenges: true,
-          projects: true,
+          projects: {
+            filters: {
+              publishedAt: {
+                $notNull: true,
+              },
+            },
+          },
         },
       });
 
