@@ -48,7 +48,19 @@ export default factories.createCoreController('api::profile.profile', ({ strapi 
         return ctx.notFound('Profile not found');
       }
 
-      return profiles[0];
+      // Count liked projects
+      const likedProjectsCount = await strapi.db.query('api::project.project').count({
+        where: {
+          likedBy: {
+            documentId: user.documentId,
+          },
+        },
+      });
+
+      return {
+        ...profiles[0],
+        likedProjectsCount,
+      };
     } catch (error) {
       strapi.log.error('Error in me:', error);
       ctx.throw(500, error);
@@ -114,7 +126,19 @@ export default factories.createCoreController('api::profile.profile', ({ strapi 
         },
       });
 
-      return finalProfile;
+      // Count liked projects
+      const likedProjectsCount = await strapi.db.query('api::project.project').count({
+        where: {
+          likedBy: {
+            documentId: user.documentId,
+          },
+        },
+      });
+
+      return {
+        ...finalProfile,
+        likedProjectsCount,
+      };
     } catch (error) {
       strapi.log.error('Error in updateMe:', error);
       ctx.throw(500, error);
