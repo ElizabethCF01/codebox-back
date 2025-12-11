@@ -507,6 +507,15 @@ export default factories.createCoreController('api::challenge.challenge', ({ str
           documentId: userProfile.documentId,
         });
 
+        // Check if this is the user's FIRST EVER challenge submission
+        const totalChallengesCompleted = (userProfile.challengesCompleted || 0) + 1;
+
+        if (totalChallengesCompleted === 1) {
+          // Award "First Challenge Submit" badge
+          const badgeService = strapi.service('api::badge.badge');
+          await badgeService.assignBadgeToProfile(userId, 'first-challenge-submit');
+        }
+
         // Increment challenge submission count
         await strapi.documents('api::challenge.challenge').update({
           documentId: id,
